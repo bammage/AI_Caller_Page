@@ -33,7 +33,7 @@
             font-weight: 500;
             cursor: pointer;
             transition: all 0.3s;
-            margin-bottom: 15px;
+            margin: 10px 5px;
         }
         button:hover {
             background-color: #1558b0;
@@ -57,11 +57,39 @@
             margin-top: 20px;
             border-radius: 8px;
             overflow: hidden;
+            border: 1px solid #dadce0;
         }
         iframe {
             width: 100%;
             height: 100%;
             border: none;
+        }
+        .audio-troubleshoot {
+            margin-top: 15px;
+            text-align: left;
+            background-color: #f1f3f4;
+            padding: 15px;
+            border-radius: 8px;
+            font-size: 14px;
+            display: none;
+        }
+        .audio-controls {
+            margin-top: 15px;
+            display: flex;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+        .red-button {
+            background-color: #d93025;
+        }
+        .red-button:hover {
+            background-color: #b7271f;
+        }
+        .green-button {
+            background-color: #0f9d58;
+        }
+        .green-button:hover {
+            background-color: #0b8043;
         }
     </style>
 </head>
@@ -70,6 +98,25 @@
         <h2>Talk to Our AI Assistant</h2>
         <button id="startCallButton">Start Conversation</button>
         <div id="status">Click the button to start talking with our AI</div>
+        
+        <div id="audioControls" class="audio-controls" style="display:none;">
+            <button id="checkAudioButton" class="green-button">Test Audio</button>
+            <button id="sayHelloButton">Say "Hello" to Start</button>
+            <button id="endCallButton" class="red-button">End Conversation</button>
+        </div>
+        
+        <div id="audioTroubleshoot" class="audio-troubleshoot">
+            <h4>Audio Troubleshooting:</h4>
+            <ol>
+                <li>Make sure your device's volume is turned up</li>
+                <li>Check that you've allowed microphone access in your browser</li>
+                <li>Try saying "Hello" to initiate the conversation</li>
+                <li>Click "Test Audio" to verify your speakers work</li>
+                <li>Try using headphones if available</li>
+                <li>If using headphones, make sure they're properly connected</li>
+            </ol>
+        </div>
+        
         <div id="callContainer" class="call-container">
             <!-- The iframe will be created here when the button is clicked -->
         </div>
@@ -80,14 +127,62 @@
             const startCallButton = document.getElementById('startCallButton');
             const status = document.getElementById('status');
             const callContainer = document.getElementById('callContainer');
+            const audioControls = document.getElementById('audioControls');
+            const checkAudioButton = document.getElementById('checkAudioButton');
+            const sayHelloButton = document.getElementById('sayHelloButton');
+            const endCallButton = document.getElementById('endCallButton');
+            const audioTroubleshoot = document.getElementById('audioTroubleshoot');
             
             // Your AWS API Gateway URL
             const tokenUrl = 'https://f5veo2ybv1.execute-api.us-east-2.amazonaws.com/default/generateRetellWebcallToken';
+            
+            // Test audio function
+            checkAudioButton.addEventListener('click', function() {
+                const audioTest = new Audio('https://actions.google.com/sounds/v1/alarms/digital_watch_alarm_long.ogg');
+                audioTest.volume = 1.0;
+                audioTest.play()
+                    .then(() => {
+                        status.textContent = "Audio test played. Did you hear a sound?";
+                    })
+                    .catch(error => {
+                        status.textContent = "Audio test failed: " + error.message;
+                        console.error("Audio playback failed:", error);
+                    });
+            });
+            
+            // Say Hello function - updates instructions only
+            sayHelloButton.addEventListener('click', function() {
+                status.textContent = "Please say 'Hello' to your microphone now to start the conversation";
+                
+                // Show troubleshooting info
+                audioTroubleshoot.style.display = 'block';
+            });
+            
+            // End call function
+            endCallButton.addEventListener('click', function() {
+                callContainer.style.display = 'none';
+                audioControls.style.display = 'none';
+                audioTroubleshoot.style.display = 'none';
+                status.textContent = 'Call ended. You can start a new conversation.';
+                startCallButton.disabled = false;
+                startCallButton.style.display = 'block';
+            });
             
             startCallButton.addEventListener('click', async function() {
                 try {
                     startCallButton.disabled = true;
                     status.textContent = 'Connecting to AI assistant...';
+                    
+                    // Request permission for microphone early - ONLY microphone, not camera
+                    try {
+                        await navigator.mediaDevices.getUserMedia({ audio: true });
+                        console.log("Microphone permission granted");
+                    } catch (err) {
+                        console.error("Microphone permission denied:", err);
+                        status.textContent = "Please allow microphone access to use this feature";
+                        startCallButton.disabled = false;
+                        return;
+                    }
                     
                     // Get token from your backend
                     console.log('Requesting token...');
@@ -104,47 +199,33 @@
                         throw new Error('Invalid token received from backend');
                     }
                     
-                    // Create the RetellAI Web Call URL
-                    const webCallUrl = `https://webcall.retellai.com/?token=${encodeURIComponent(data.accessToken)}`;
+                    // Create RetellAI Web Call URL with additional parameters
+                    const webCallUrl = `https://webcall.retellai.com/?token=${encodeURIComponent(data.accessToken)}&autoConnect=true&debug=true`;
                     
-                    // Create and insert the iframe
+                    // Create and insert the iframe - REMOVED camera permissions
                     const iframe = document.createElement('iframe');
                     iframe.src = webCallUrl;
-                    iframe.allow = "microphone; camera";
-                    iframe.title = "RetellAI Web Call";
+                    iframe.allow = "microphone; autoplay; speaker";
+                    iframe.title = "RetellAI Voice Call";
                     
                     // Clear any existing content and add the iframe
                     callContainer.innerHTML = '';
                     callContainer.appendChild(iframe);
                     callContainer.style.display = 'block';
                     
-                    status.textContent = 'AI assistant connected! Please allow microphone access if prompted.';
+                    // Hide the start button and show audio controls
+                    startCallButton.style.display = 'none';
+                    audioControls.style.display = 'flex';
                     
-                    // Handle iframe communication (for future enhancement)
-                    window.addEventListener('message', function(event) {
-                        // Check if the message is from RetellAI
-                        if (event.origin.includes('retellai.com')) {
-                            if (event.data && event.data.type === 'call_ended') {
-                                status.textContent = 'Call ended. You can start a new conversation.';
-                                startCallButton.disabled = false;
-                                callContainer.style.display = 'none';
-                            }
-                        }
-                    });
+                    status.textContent = 'AI assistant connected! Please say "Hello" to start the conversation.';
                     
-                    // Enable the button again after a timeout (in case the call doesn't end properly)
+                    // Show troubleshooting after a delay
                     setTimeout(() => {
-                        const endCallButton = document.createElement('button');
-                        endCallButton.textContent = 'End Conversation';
-                        endCallButton.style.backgroundColor = '#d93025';
-                        endCallButton.addEventListener('click', function() {
-                            callContainer.style.display = 'none';
-                            status.textContent = 'Call ended. You can start a new conversation.';
-                            startCallButton.disabled = false;
-                            document.querySelector('.container').removeChild(endCallButton);
-                        });
-                        document.querySelector('.container').insertBefore(endCallButton, status);
-                    }, 5000);
+                        if (audioTroubleshoot.style.display !== 'block') {
+                            audioTroubleshoot.style.display = 'block';
+                            status.textContent = "No audio yet? Try the troubleshooting steps below.";
+                        }
+                    }, 10000);
                     
                 } catch (error) {
                     console.error('Error:', error);
