@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RetellAI Launcher</title>
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/retell-client-js-sdk@latest/dist/index.min.js"></script>
+    <style>
+        body {
+            font-family: 'Google Sans', Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            background-color: #f8f9fa;
+        }
+        .container {
+            text-align: center;
+            padding: 2rem;
+            border-radius: 8px;
+            background-color: white;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.12);
+            max-width: 400px;
+            width: 100%;
+        }
+        button {
+            background-color: #1a73e8;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 4px;
+            font-size: 16px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        button:hover {
+            background-color: #1558b0;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        }
+        button:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+            box-shadow: none;
+        }
+        #status {
+            margin-top: 20px;
+            color: #5f6368;
+            font-size: 14px;
+            min-height: 40px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>Talk to Our AI Assistant</h2>
+        <button id="callButton">Start Conversation</button>
+        <div id="status">Click the button to start talking with our AI</div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const button = document.getElementById('callButton');
+            const status = document.getElementById('status');
+            let retellClient = null;
+
+            // Your backend token URL
+            const tokenUrl = 'https://f5veo2ybv1.execute-api.us-east-2.amazonaws.com/default/generateRetellWebcallToken';
+
+            button.addEventListener('click', async function() {
+                try {
+                    button.disabled = true;
+                    status.textContent = 'Connecting...';
+                    
+                    // First, verify the SDK is loaded
+                    if (typeof RetellWebClient === 'undefined') {
+                        throw new Error('RetellAI SDK not loaded properly. Please try again later or contact support.');
+                    }
+                    
+                    // Get token from your backend
+                    console.log('Requesting token...');
+                    const response = await fetch(tokenUrl, { method: 'POST' });
+                    
+                    if (!response.ok) {
+                        throw new Error(`Failed to get token: ${response.status}`);
+                    }
+                    
+                    const data = await response.json();
+                    console.log('Token received');
+                    
+                    if (!data.accessToken) {
+                        throw new Error('Invalid token received from backend');
+                    }
+                    
+                    // Initialize RetellAI client
+                    retellClient = new RetellWebClient();
+                    
+                    // Set up event listeners
+                    retellClient.on('conversationStarted', () => {
+                        status.textContent = 'Connected! You are now talking to the AI.';
+                        console.log('Conversation started');
+                    });
+                    
+                    retellClient.on('conversationEnded', (info) => {
+                        status.textContent = 'Call ended. You may start a new conversation.';
+                        button.disabled = false;
+                        console.log('Conversation ended', info);
+                    });
+                    
+                    retellClient.on('error', (error) => {
+                        status.textContent = `Error: ${error.message || 'Unknown error'}`;
+                        button.disabled = false;
+                        console.error('RetellAI error:', error);
+                    });
+                    
+                    // Start conversation
+                    await retellClient.startConversation({
+                        accessToken: data.accessToken
+                    });
+                    
+                    status.textContent = 'Connecting to AI assistant...';
+                    
+                } catch (error) {
+                    console.error('Error:', error);
+                    status.textContent = `Error: ${error.message || 'Unknown error'}`;
+                    button.disabled = false;
+                }
+            });
+        });
+    </script>
+</body>
+</html>
