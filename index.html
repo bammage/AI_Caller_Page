@@ -3,238 +3,287 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Talk to Our AI Assistant</title>
+    <title>AI Assistant</title>
     <style>
         body {
             font-family: 'Google Sans', Arial, sans-serif;
+            margin: 0;
+            padding: 0;
             display: flex;
             justify-content: center;
             align-items: center;
-            height: 100vh;
-            margin: 0;
+            min-height: 100vh;
             background-color: #f8f9fa;
         }
         .container {
-            text-align: center;
-            padding: 2rem;
-            border-radius: 8px;
-            background-color: white;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.12);
-            max-width: 500px;
             width: 90%;
+            max-width: 500px;
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            padding: 24px;
+            text-align: center;
         }
-        button {
+        h1 {
+            color: #202124;
+            font-size: 24px;
+            margin-top: 0;
+            margin-bottom: 24px;
+        }
+        .button {
             background-color: #1a73e8;
             color: white;
             border: none;
             padding: 12px 24px;
-            border-radius: 4px;
             font-size: 16px;
             font-weight: 500;
+            border-radius: 4px;
             cursor: pointer;
-            transition: all 0.3s;
-            margin: 10px 5px;
+            transition: all 0.2s ease;
         }
-        button:hover {
+        .button:hover {
             background-color: #1558b0;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
         }
-        button:disabled {
-            background-color: #ccc;
+        .button:disabled {
+            background-color: #dadce0;
+            color: #5f6368;
             cursor: not-allowed;
             box-shadow: none;
         }
-        #status {
-            margin-top: 15px;
-            color: #5f6368;
+        .status {
+            margin: 16px 0;
+            padding: 12px;
+            background-color: #f8f9fa;
+            border-radius: 4px;
             font-size: 14px;
-            min-height: 40px;
+            color: #5f6368;
+            min-height: 20px;
         }
-        .call-container {
-            display: none;
+        .call-frame {
             width: 100%;
             height: 500px;
-            margin-top: 20px;
+            border: 1px solid #dadce0;
             border-radius: 8px;
             overflow: hidden;
-            border: 1px solid #dadce0;
+            display: none;
+            margin-top: 16px;
         }
         iframe {
             width: 100%;
             height: 100%;
             border: none;
         }
-        .audio-troubleshoot {
-            margin-top: 15px;
+        .logs {
+            margin-top: 16px;
             text-align: left;
-            background-color: #f1f3f4;
-            padding: 15px;
-            border-radius: 8px;
-            font-size: 14px;
+            background-color: #f8f9fa;
+            padding: 12px;
+            border-radius: 4px;
+            font-size: 12px;
+            color: #5f6368;
+            max-height: 150px;
+            overflow-y: auto;
             display: none;
         }
-        .audio-controls {
-            margin-top: 15px;
-            display: flex;
-            justify-content: center;
-            flex-wrap: wrap;
+        .end-call {
+            background-color: #ea4335;
+            margin-top: 12px;
+            display: none;
         }
-        .red-button {
+        .end-call:hover {
             background-color: #d93025;
         }
-        .red-button:hover {
-            background-color: #b7271f;
-        }
-        .green-button {
-            background-color: #0f9d58;
-        }
-        .green-button:hover {
-            background-color: #0b8043;
+        .debug-toggle {
+            color: #1a73e8;
+            background: none;
+            border: none;
+            font-size: 12px;
+            margin-top: 16px;
+            cursor: pointer;
+            text-decoration: underline;
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <h2>Talk to Our AI Assistant</h2>
-        <button id="startCallButton">Start Conversation</button>
-        <div id="status">Click the button to start talking with our AI</div>
-        
-        <div id="audioControls" class="audio-controls" style="display:none;">
-            <button id="checkAudioButton" class="green-button">Test Audio</button>
-            <button id="sayHelloButton">Say "Hello" to Start</button>
-            <button id="endCallButton" class="red-button">End Conversation</button>
+        <h1>Talk to Our AI Assistant</h1>
+        <button id="startButton" class="button">Start Conversation</button>
+        <button id="endButton" class="button end-call">End Conversation</button>
+        <div id="status" class="status">Click the button to start a conversation with our AI assistant.</div>
+        <div id="callFrame" class="call-frame">
+            <!-- iframe will be inserted here -->
         </div>
-        
-        <div id="audioTroubleshoot" class="audio-troubleshoot">
-            <h4>Audio Troubleshooting:</h4>
-            <ol>
-                <li>Make sure your device's volume is turned up</li>
-                <li>Check that you've allowed microphone access in your browser</li>
-                <li>Try saying "Hello" to initiate the conversation</li>
-                <li>Click "Test Audio" to verify your speakers work</li>
-                <li>Try using headphones if available</li>
-                <li>If using headphones, make sure they're properly connected</li>
-            </ol>
-        </div>
-        
-        <div id="callContainer" class="call-container">
-            <!-- The iframe will be created here when the button is clicked -->
-        </div>
+        <button id="debugToggle" class="debug-toggle">Show Technical Details</button>
+        <div id="logs" class="logs"></div>
     </div>
 
     <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            const startCallButton = document.getElementById('startCallButton');
-            const status = document.getElementById('status');
-            const callContainer = document.getElementById('callContainer');
-            const audioControls = document.getElementById('audioControls');
-            const checkAudioButton = document.getElementById('checkAudioButton');
-            const sayHelloButton = document.getElementById('sayHelloButton');
-            const endCallButton = document.getElementById('endCallButton');
-            const audioTroubleshoot = document.getElementById('audioTroubleshoot');
-            
-            // Your AWS API Gateway URL
-            const tokenUrl = 'https://f5veo2ybv1.execute-api.us-east-2.amazonaws.com/default/generateRetellWebcallToken';
-            
-            // Test audio function
-            checkAudioButton.addEventListener('click', function() {
-                const audioTest = new Audio('https://actions.google.com/sounds/v1/alarms/digital_watch_alarm_long.ogg');
-                audioTest.volume = 1.0;
-                audioTest.play()
-                    .then(() => {
-                        status.textContent = "Audio test played. Did you hear a sound?";
-                    })
-                    .catch(error => {
-                        status.textContent = "Audio test failed: " + error.message;
-                        console.error("Audio playback failed:", error);
-                    });
-            });
-            
-            // Say Hello function - updates instructions only
-            sayHelloButton.addEventListener('click', function() {
-                status.textContent = "Please say 'Hello' to your microphone now to start the conversation";
+        // Elements
+        const startButton = document.getElementById('startButton');
+        const endButton = document.getElementById('endButton');
+        const status = document.getElementById('status');
+        const callFrame = document.getElementById('callFrame');
+        const logs = document.getElementById('logs');
+        const debugToggle = document.getElementById('debugToggle');
+
+        // Your Lambda function URL - Replace with your actual URL
+        const tokenUrl = 'https://f5veo2ybv1.execute-api.us-east-2.amazonaws.com/default/generateRetellWebcallToken';
+        
+        // Logging function
+        function log(message) {
+            console.log(message);
+            const timestamp = new Date().toLocaleTimeString();
+            logs.innerHTML += `<div>${timestamp}: ${message}</div>`;
+            logs.scrollTop = logs.scrollHeight; // Auto-scroll to bottom
+        }
+        
+        // Toggle debug info
+        debugToggle.addEventListener('click', function() {
+            if (logs.style.display === 'none' || !logs.style.display) {
+                logs.style.display = 'block';
+                debugToggle.textContent = 'Hide Technical Details';
+            } else {
+                logs.style.display = 'none';
+                debugToggle.textContent = 'Show Technical Details';
+            }
+        });
+        
+        // End call function
+        endButton.addEventListener('click', function() {
+            endCall();
+        });
+        
+        // Clean up function for ending calls
+        function endCall() {
+            callFrame.style.display = 'none';
+            callFrame.innerHTML = '';
+            endButton.style.display = 'none';
+            startButton.disabled = false;
+            status.textContent = 'Call ended. You can start a new conversation.';
+            log('Call ended by user');
+        }
+        
+        // Start call function
+        startButton.addEventListener('click', async function() {
+            try {
+                // Reset and prepare UI
+                startButton.disabled = true;
+                status.textContent = 'Preparing connection...';
+                logs.innerHTML = '';
                 
-                // Show troubleshooting info
-                audioTroubleshoot.style.display = 'block';
-            });
-            
-            // End call function
-            endCallButton.addEventListener('click', function() {
-                callContainer.style.display = 'none';
-                audioControls.style.display = 'none';
-                audioTroubleshoot.style.display = 'none';
-                status.textContent = 'Call ended. You can start a new conversation.';
-                startCallButton.disabled = false;
-                startCallButton.style.display = 'block';
-            });
-            
-            startCallButton.addEventListener('click', async function() {
+                log('Starting connection process');
+                
+                // Request microphone permission
+                log('Requesting microphone access...');
+                
                 try {
-                    startCallButton.disabled = true;
-                    status.textContent = 'Connecting to AI assistant...';
+                    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                    log('✓ Microphone permission granted');
                     
-                    // Request permission for microphone early - ONLY microphone, not camera
-                    try {
-                        await navigator.mediaDevices.getUserMedia({ audio: true });
-                        console.log("Microphone permission granted");
-                    } catch (err) {
-                        console.error("Microphone permission denied:", err);
-                        status.textContent = "Please allow microphone access to use this feature";
-                        startCallButton.disabled = false;
-                        return;
-                    }
-                    
-                    // Get token from your backend
-                    console.log('Requesting token...');
-                    const response = await fetch(tokenUrl, { method: 'POST' });
-                    
-                    if (!response.ok) {
-                        throw new Error(`Failed to get token: ${response.status}`);
-                    }
-                    
-                    const data = await response.json();
-                    console.log('Token received successfully');
-                    
-                    if (!data.accessToken) {
-                        throw new Error('Invalid token received from backend');
-                    }
-                    
-                    // Create RetellAI Web Call URL with additional parameters
-                    const webCallUrl = `https://webcall.retellai.com/?token=${encodeURIComponent(data.accessToken)}&autoConnect=true&debug=true`;
-                    
-                    // Create and insert the iframe - REMOVED camera permissions
-                    const iframe = document.createElement('iframe');
-                    iframe.src = webCallUrl;
-                    iframe.allow = "microphone; autoplay; speaker";
-                    iframe.title = "RetellAI Voice Call";
-                    
-                    // Clear any existing content and add the iframe
-                    callContainer.innerHTML = '';
-                    callContainer.appendChild(iframe);
-                    callContainer.style.display = 'block';
-                    
-                    // Hide the start button and show audio controls
-                    startCallButton.style.display = 'none';
-                    audioControls.style.display = 'flex';
-                    
-                    status.textContent = 'AI assistant connected! Please say "Hello" to start the conversation.';
-                    
-                    // Show troubleshooting after a delay
-                    setTimeout(() => {
-                        if (audioTroubleshoot.style.display !== 'block') {
-                            audioTroubleshoot.style.display = 'block';
-                            status.textContent = "No audio yet? Try the troubleshooting steps below.";
-                        }
-                    }, 10000);
-                    
-                } catch (error) {
-                    console.error('Error:', error);
-                    status.textContent = `Error: ${error.message || 'Unknown error'}`;
-                    startCallButton.disabled = false;
+                    // Stop tracks immediately to avoid conflicts
+                    stream.getTracks().forEach(track => track.stop());
+                } catch (err) {
+                    log(`✗ Microphone permission denied: ${err.message}`);
+                    status.textContent = 'Please allow microphone access to use this feature.';
+                    startButton.disabled = false;
+                    return;
                 }
-            });
+                
+                // Get token from your Lambda function
+                log('Requesting token from backend...');
+                status.textContent = 'Connecting to AI assistant...';
+                
+                const response = await fetch(tokenUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    throw new Error(`Failed to get token (${response.status}): ${errorText}`);
+                }
+                
+                const data = await response.json();
+                log('✓ Token received from backend');
+                
+                if (!data.accessToken) {
+                    throw new Error('Invalid response: No access token received');
+                }
+                
+                // Create RetellAI Web Call URL
+                const webCallUrl = `https://webcall.retellai.com/?token=${encodeURIComponent(data.accessToken)}`;
+                log('Generated web call URL');
+                
+                // Create and add the iframe
+                const iframe = document.createElement('iframe');
+                iframe.src = webCallUrl;
+                iframe.allow = "microphone; autoplay";
+                iframe.title = "AI Voice Assistant";
+                iframe.id = "retellIframe";
+                
+                // Set up connection timeout
+                const connectionTimeout = setTimeout(() => {
+                    if (status.textContent.includes('Connecting')) {
+                        log('⚠️ Connection is taking longer than expected');
+                        status.textContent = 'Connection is taking longer than expected. The AI should speak soon.';
+                    }
+                }, 8000);
+                
+                // Set up final timeout
+                const finalTimeout = setTimeout(() => {
+                    if (status.textContent.includes('longer than expected')) {
+                        log('⚠️ Possible connection issue detected');
+                        status.textContent = 'We may be having trouble connecting. Try refreshing the page or check your audio settings.';
+                        
+                        // Add refresh button
+                        const refreshButton = document.createElement('button');
+                        refreshButton.textContent = 'Refresh Connection';
+                        refreshButton.className = 'button';
+                        refreshButton.style.marginTop = '12px';
+                        refreshButton.addEventListener('click', function() {
+                            window.location.reload();
+                        });
+                        status.appendChild(document.createElement('br'));
+                        status.appendChild(refreshButton);
+                    }
+                }, 20000);
+                
+                // Handle iframe load event
+                iframe.onload = function() {
+                    log('✓ Iframe loaded successfully');
+                    status.textContent = 'Connected! The AI assistant should speak momentarily.';
+                    callFrame.style.display = 'block';
+                    endButton.style.display = 'block';
+                };
+                
+                // Add the iframe to the page
+                callFrame.innerHTML = '';
+                callFrame.appendChild(iframe);
+                callFrame.style.display = 'block';
+                
+                // Set up message listener for potential communication from iframe
+                window.addEventListener('message', function(event) {
+                    // Check if the message is from the RetellAI domain
+                    if (event.origin.includes('retellai.com')) {
+                        log(`Received message from iframe: ${JSON.stringify(event.data)}`);
+                        
+                        if (event.data && event.data.type === 'call_ended') {
+                            endCall();
+                            clearTimeout(connectionTimeout);
+                            clearTimeout(finalTimeout);
+                        }
+                    }
+                });
+                
+            } catch (error) {
+                log(`✗ Error: ${error.message}`);
+                status.textContent = `Error: ${error.message}`;
+                startButton.disabled = false;
+            }
         });
     </script>
 </body>
-</html>
 </html>
